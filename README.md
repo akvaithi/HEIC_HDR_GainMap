@@ -71,6 +71,20 @@ proprietary `MakerApple` gain map, 8-bit); see the project history for that chan
 2. Click **Add**.
 3. Select `HEIC_HDR_GainMap.lrplugin` from this repository (or from the mounted `.dmg`).
 
+### Installing a downloaded build (Gatekeeper)
+
+The bundled `toGainMapHDR` binary is **ad-hoc signed, not Apple-notarized**, so a copy you
+**download** (from the DMG/zip release) carries macOS's quarantine flag and may be blocked
+the first time Lightroom runs it ("cannot be opened because the developer cannot be
+verified"). Remove the quarantine flag once, after copying the plugin out of the DMG:
+
+```sh
+xattr -dr com.apple.quarantine /path/to/HEIC_HDR_GainMap.lrplugin
+```
+
+(Or, from a clone of this repo, `make unquarantine`.) Builds you compile yourself with
+`make` are **not** quarantined and need no extra step.
+
 ## How to use
 
 1. Select your photo(s) and open the **Export** window.
