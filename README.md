@@ -73,18 +73,23 @@ proprietary `MakerApple` gain map, 8-bit); see the project history for that chan
 
 1. Select your photo(s) and open the **Export** window.
 2. At the top, choose **"Export to HEIC"**.
-3. Set the export **Format** to **TIFF** (it is used as the HDR intermediary).
-4. Set **Bit Depth** to **16 bits/component**.
-5. Set **Color Space** to a wide gamut — **Display P3** or **Rec. 2020** (ProPhoto also works).
-6. Enable **HDR Output**, but **disable "Maximum Compatibility"**.
-7. Export.
+3. Export.
 
-> **Why these settings matter:** the gain-map engine can only preserve the HDR headroom
-> and gamut that Lightroom hands it. An 8-bit or non-TIFF intermediary yields a *hollow*
-> 10-bit HEIC, and a narrow (sRGB) export clips saturated HDR highlights before the engine
-> ever sees them. The plugin will warn before exporting if these aren't set. The export
-> dialog's **Image Quality** slider (default **85**) maps to the HEVC quality — 85 is the
-> recommended HDR sweet spot; lower values introduce visible banding/blocking in highlights.
+The plugin **auto-configures the intermediary** (16-bit, ProPhoto RGB, lossless TIFF, HDR
+output on) so you don't have to touch the File Settings section — it forces the format the
+HDR pipeline needs on every export. A runtime guard still warns if anything ends up wrong.
+
+### Export dialog options
+
+- **Image Quality** (default **85**) — the HEVC quality of the final HEIC. 85 is the HDR
+  sweet spot; lower values introduce visible banding/blocking in highlights.
+- **Encoder**:
+  - *Gain Map HDR (recommended)* — the full pipeline: 10-bit HEIC with an ISO 21496-1 gain map.
+  - *Plain HEIC – no HDR (macOS sips)* — a quick `sips` conversion with **no** gain map and
+    **no** HDR. Only for when you want a plain SDR HEIC.
+- **Apple Photos** — tick *Add exported HEIC to album* and name an album to import each result
+  straight into Photos (the album is created if missing). macOS asks for permission to control
+  Photos the first time; allow it under **System Settings ▸ Privacy & Security ▸ Automation**.
 
 ### Output format
 
