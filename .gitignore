@@ -1,4 +1,7 @@
 .DS_Store
 build
 dmg_root
-export_heic.lrdevplugin.dmg
+
+# Build artifacts (regenerate with `make dmg` / `make zip`)
+*.dmg
+*.zip

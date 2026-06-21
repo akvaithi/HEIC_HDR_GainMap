@@ -2,14 +2,16 @@
 # Usage:
 #   make SIGN_ID="Developer ID Application: Your Name (TEAMID)"
 
-PLUGIN_DIR=./export_heic.lrdevplugin
+PLUGIN_NAME=HEIC_HDR_GainMap.lrplugin
+PLUGIN_DIR=./$(PLUGIN_NAME)
 BUILD_DIR=./build
 BIN_NAME=toGainMapHDR
 BIN_UNI=$(PLUGIN_DIR)/$(BIN_NAME)
 BIN_X86=$(BUILD_DIR)/$(BIN_NAME)_x86_64
 BIN_ARM=$(BUILD_DIR)/$(BIN_NAME)_arm64
-DMG_PATH=./export_heic.lrdevplugin.dmg
-DMG_VOLNAME=GainMap HDR HEIF Exporter
+DMG_PATH=./HEIC_HDR_GainMap.dmg
+ZIP_PATH=./HEIC_HDR_GainMap.lrplugin.zip
+DMG_VOLNAME=HEIC HDR Gain Map Exporter
 LR_MODULES_DIR=$(HOME)/Library/Application\ Support/Adobe/Lightroom/Modules
 DMG_STAGING=./dmg_root
 BACKGROUND_PNG=./dmg_background.png
@@ -56,9 +58,9 @@ all:
 	chmod +x $(BIN_UNI)
 	# Codesign executable (if SIGN_ID provided)
 	$(SIGN_CMD) $(BIN_UNI)
-	# Note: .lrdevplugin is not an app bundle; skip signing the directory itself
+	# Note: .lrplugin is not an app bundle; skip signing the directory itself
 
-.PHONY: dmg dist adhoc install unquarantine notarize staple verify release help
+.PHONY: dmg dist adhoc zip install unquarantine notarize staple verify release help
 
 
 dmg: all
@@ -66,7 +68,7 @@ dmg: all
 	rm -rf "$(DMG_STAGING)" "$(DMG_PATH)"
 	mkdir -p "$(DMG_STAGING)"
 	# Copy plugin into staging
-	cp -R "$(PLUGIN_DIR)" "$(DMG_STAGING)/export_heic.lrdevplugin"
+	cp -R "$(PLUGIN_DIR)" "$(DMG_STAGING)/$(PLUGIN_NAME)"
 	# Single-user install: user drags plugin into ~/Library/.../Modules manually
 	# Optional background image support
 	@if [ -f "$(BACKGROUND_PNG)" ]; then \
@@ -83,10 +85,15 @@ adhoc:
 	$(MAKE) SIGN_ID=- all
 	$(MAKE) zip
 
+zip: all
+	rm -f "$(ZIP_PATH)"
+	ditto -c -k --keepParent "$(PLUGIN_DIR)" "$(ZIP_PATH)"
+	@echo "Packaged $(ZIP_PATH)"
+
 install: all
 	mkdir -p "$(LR_MODULES_DIR)"
-	rsync -a --delete "$(PLUGIN_DIR)/" "$(LR_MODULES_DIR)/export_heic.lrdevplugin/"
-	@echo "Installed to $(LR_MODULES_DIR)/export_heic.lrdevplugin"
+	rsync -a --delete "$(PLUGIN_DIR)/" "$(LR_MODULES_DIR)/$(PLUGIN_NAME)/"
+	@echo "Installed to $(LR_MODULES_DIR)/$(PLUGIN_NAME)"
 
 unquarantine:
 	@echo "Removing quarantine attribute from $(PLUGIN_DIR)"
@@ -124,6 +131,7 @@ help:
 	@echo "Targets:"
 	@echo "  all            Build universal binary (arm64+x86_64) and optional sign"
 	@echo "  dmg            Create distributable DMG ($(DMG_PATH))"
+	@echo "  zip            Package the .lrplugin as a zip ($(ZIP_PATH))"
 	@echo "  dist           Build + dmg"
 	@echo "  adhoc          Build with ad-hoc signature and zip"
 	@echo "  install        Copy plugin to Lightroom Modules dir"

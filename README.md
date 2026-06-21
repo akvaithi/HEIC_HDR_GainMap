@@ -18,7 +18,7 @@ This is a **combined** repository that merges two upstream projects:
 
 | Component | Upstream | Role |
 |-----------|----------|------|
-| Lightroom plugin (`export_heic.lrdevplugin/`, `Makefile`) | [fengshenx/LR_GainMap_HDR_Export_Plugin](https://github.com/fengshenx/LR_GainMap_HDR_Export_Plugin) | The LRC export service plugin (Lua) |
+| Lightroom plugin (`HEIC_HDR_GainMap.lrplugin/`, `Makefile`) | [fengshenx/LR_GainMap_HDR_Export_Plugin](https://github.com/fengshenx/LR_GainMap_HDR_Export_Plugin) | The LRC export service plugin (Lua) |
 | Conversion engine (`main.swift`, `CustomFilter/`, `Resource/`) | [chemharuka/toGainMapHDR](https://github.com/chemharuka/toGainMapHDR) | The `toGainMapHDR` command-line converter |
 
 The plugin bundles a compiled copy of the engine. The original plugin shipped an engine
@@ -51,13 +51,15 @@ proprietary `MakerApple` gain map, 8-bit); see the project history for that chan
 │   └── RGBGainMapKernel.ci.metal
 ├── Resource/
 │   └── Metadata.swift               # XMP gain-map metadata templates
-├── export_heic.lrdevplugin/         # the Lightroom plugin (this is what you install)
+├── HEIC_HDR_GainMap.lrplugin/       # the Lightroom plugin (this is what you install)
 │   ├── ExportServiceProvider.lua
 │   ├── Info.lua
 │   ├── toGainMapHDR                 # compiled universal (arm64 + x86_64) engine
 │   ├── GainMapKernel.ci.metallib
 │   └── RGBGainMapKernel.ci.metallib
 ├── Makefile
+├── CHANGELOG.md
+├── CLAUDE.md                        # notes for AI coding assistants
 └── LICENSE                          # MIT (from chemharuka/toGainMapHDR)
 ```
 
@@ -67,7 +69,7 @@ proprietary `MakerApple` gain map, 8-bit); see the project history for that chan
 
 1. Open **File ▸ Plug-in Manager** in Lightroom Classic.
 2. Click **Add**.
-3. Select `export_heic.lrdevplugin` from this repository.
+3. Select `HEIC_HDR_GainMap.lrplugin` from this repository (or from the mounted `.dmg`).
 
 ## How to use
 
@@ -113,12 +115,12 @@ make install                                    # optional: copy plugin into LRC
 ```
 
 If the Metal Toolchain is unavailable, the prebuilt `.metallib` shader libraries that
-ship in `export_heic.lrdevplugin/` (taken from chemharuka/toGainMapHDR v3.3.1, matching
+ship in `HEIC_HDR_GainMap.lrplugin/` (taken from chemharuka/toGainMapHDR v3.3.1, matching
 the `.metal` sources here) can be reused as-is; `make` will still recompile the Swift
 binary from source.
 
-The `Makefile` also provides `dmg`, `dist`, `adhoc`, `notarize`, `staple`, and `release`
-targets — run `make help` for details.
+The `Makefile` also provides `dmg`, `zip`, `dist`, `adhoc`, `notarize`, `staple`, and
+`release` targets — run `make help` for details.
 
 ---
 
