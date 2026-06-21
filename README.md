@@ -75,18 +75,16 @@ proprietary `MakerApple` gain map, 8-bit); see the project history for that chan
 2. At the top, choose **"Export to HEIC"**.
 3. Export.
 
-The plugin **auto-configures the intermediary** (16-bit, ProPhoto RGB, lossless TIFF, HDR
-output on) so you don't have to touch the File Settings section — it forces the format the
-HDR pipeline needs on every export. A runtime guard still warns if anything ends up wrong.
+The plugin **auto-configures the intermediary** on every export — it locks the **Format** to
+TIFF and forces **16-bit depth**, **HDR Output on**, and **Maximize Compatibility off**. You
+only need to pick the **Color Space / gamut** yourself (Display P3 or Rec. 2020 recommended for
+the richest HDR highlights; it's left editable in the File Settings section). A runtime guard
+warns if any forced setting doesn't take.
 
 ### Export dialog options
 
 - **Image Quality** (default **85**) — the HEVC quality of the final HEIC. 85 is the HDR
   sweet spot; lower values introduce visible banding/blocking in highlights.
-- **Encoder**:
-  - *Gain Map HDR (recommended)* — the full pipeline: 10-bit HEIC with an ISO 21496-1 gain map.
-  - *Plain HEIC – no HDR (macOS sips)* — a quick `sips` conversion with **no** gain map and
-    **no** HDR. Only for when you want a plain SDR HEIC.
 - **Apple Photos** — tick *Add exported HEIC to album* and name an album to import each result
   straight into Photos (the album is created if missing). macOS asks for permission to control
   Photos the first time; allow it under **System Settings ▸ Privacy & Security ▸ Automation**.

@@ -11,27 +11,26 @@ local exportServiceProvider = {}
 
 exportServiceProvider.exportPresetFields = {
     { key = 'imageQuality', default = 85 }, -- 85 is the HDR sweet spot; HEVC artifacts show in highlights below this
-    { key = 'conversionTool', default = 'toGainMapHDR' }, -- Added conversion tool option
     { key = 'addToPhotos', default = false },             -- import the result into Apple Photos
     { key = 'photosAlbum', default = 'Lightroom HDR' },   -- target album name
 }
 
--- Lock the export to the format the HDR pipeline needs, so the user doesn't have to
--- configure the File Settings section by hand.
+-- Lock the export to the format the HDR pipeline needs.
 exportServiceProvider.allowFileFormats = { 'TIFF' }
 
--- Force a 16-bit, wide-gamut, HDR TIFF intermediary every time this plugin exports.
--- (TIFF is lossless, so there is no quality field to worry about; our own slider
--- drives the HEIC quality.)  Note: LR_export_useHDR is the Lightroom Classic 14 key
--- for the "HDR Output" checkbox; if a future LRC renames it, the runtime guard below
--- still catches a missing HDR export.
+-- Force the parts of the intermediary the HDR pipeline depends on, every export:
+--   16-bit depth, HDR Output on, and Maximize Compatibility off.
+-- Color space (gamut) is intentionally left untouched so it stays user-selectable
+-- in the File Settings section.
+-- Note: LR_export_useHDR / LR_export_maximizeCompatibility are the Lightroom Classic 14
+-- HDR keys; if a future LRC renames them, the runtime guard below still catches a
+-- non-HDR export.
 exportServiceProvider.updateExportSettings = function( exportSettings )
     exportSettings.LR_format = 'TIFF'
     exportSettings.LR_export_bitDepth = 16
     exportSettings.LR_tiff_compressionMethod = 'compressionMethod_None'
-    exportSettings.LR_export_colorSpace = 'ProPhotoRGB' -- widest standard gamut; engine outputs P3
-    exportSettings.LR_export_useHDR = true              -- HDR Output on
-    exportSettings.LR_minimizeEmbeddedMetadata = false
+    exportSettings.LR_export_useHDR = true                 -- HDR Output on
+    exportSettings.LR_export_maximizeCompatibility = false -- do not bake an SDR-compat copy
 end
 
 
@@ -66,22 +65,6 @@ exportServiceProvider.sectionsForTopOfDialog = function(viewFactory, propertyTab
             },
             f:row {
                 f:static_text {
-                    title = "Encoder:",
-                    alignment = 'right',
-                    width = LrView.share 'label_width',
-                },
-                f:popup_menu {
-                    items = {
-                        { title = 'Gain Map HDR (recommended)', value = 'toGainMapHDR' },
-                        { title = 'Plain HEIC \226\128\147 no HDR (macOS sips)', value = 'sips' },
-                    },
-                    value = LrView.bind 'conversionTool',
-                    tooltip = "Gain Map HDR: 10-bit HEIC with an ISO 21496-1 HDR gain map (this plugin's purpose). "
-                        .. "Plain HEIC: a quick macOS sips conversion with no gain map and no HDR.",
-                },
-            },
-            f:row {
-                f:static_text {
                     title = "Apple Photos:",
                     alignment = 'right',
                     width = LrView.share 'label_width',
@@ -111,34 +94,32 @@ exportServiceProvider.processRenderedPhotos = function(functionContext, exportCo
     })
 
     local imageQuality = exportContext.propertyTable.imageQuality or 85
-    local conversionTool = exportContext.propertyTable.conversionTool or 'toGainMapHDR'
     local addToPhotos = exportContext.propertyTable.addToPhotos
     local photosAlbum = exportContext.propertyTable.photosAlbum or 'Lightroom HDR'
     local photosImportList = {} -- HEIC paths to import into Apple Photos at the end
 
-    -- Quality guard: the gain-map engine can only preserve the HDR headroom and gamut
-    -- that Lightroom hands it. An 8-bit or non-TIFF intermediary produces a hollow
-    -- 10-bit HEIC, so warn (once) if the export isn't 16-bit TIFF with HDR enabled.
-    if conversionTool == 'toGainMapHDR' then
+    -- Backstop: the settings above are forced in updateExportSettings, but if a future
+    -- Lightroom renames a key, warn (rather than silently produce a hollow HEIC) when the
+    -- intermediary isn't 16-bit TIFF with HDR output on.
+    do
         local settings = exportContext.propertyTable
         local fmt = settings.LR_format
         local bitDepth = tonumber(settings.LR_export_bitDepth) or 8
         local hdrOn = settings.LR_export_useHDR
         local issues = {}
         if fmt ~= 'TIFF' then
-            table.insert(issues, "- Format is '" .. tostring(fmt) .. "'; use TIFF (it is the HDR intermediary).")
+            table.insert(issues, "- Format is '" .. tostring(fmt) .. "'; it must be TIFF (the HDR intermediary).")
         end
         if bitDepth < 16 then
-            table.insert(issues, "- Bit Depth is " .. bitDepth .. "-bit; use 16-bit so the 10-bit HEIC has real precision.")
+            table.insert(issues, "- Bit Depth is " .. bitDepth .. "-bit; it must be 16-bit for real 10-bit precision.")
         end
         if hdrOn == false then
-            table.insert(issues, "- HDR Output is off; enable it (and disable 'Maximum Compatibility').")
+            table.insert(issues, "- HDR Output is off; it must be on (with 'Maximize Compatibility' off).")
         end
         if #issues > 0 then
             local choice = LrDialogs.confirm(
                 "Export settings may limit HDR quality",
-                "For best 10-bit ISO 21496-1 HDR results:\n\n" .. table.concat(issues, "\n") ..
-                "\n\nExport wide-gamut (Display P3 or Rec. 2020) for the richest highlights.",
+                "The plugin couldn't force these for 10-bit ISO 21496-1 HDR:\n\n" .. table.concat(issues, "\n"),
                 "Continue anyway", "Cancel")
             if choice == 'cancel' then
                 progressScope:done()
@@ -154,20 +135,11 @@ exportServiceProvider.processRenderedPhotos = function(functionContext, exportCo
         if success then
             local heicPath = LrPathUtils.replaceExtension(pathOrMessage, "heic")
 
-            local command
-            if conversionTool == 'toGainMapHDR' then
-                local pluginPath = LrPathUtils.child(_PLUGIN.path, "toGainMapHDR")
-                local destFolder = LrPathUtils.parent(heicPath)
-                -- ISO 21496-1 adaptive gain map (default path), 10-bit Main 10 base, full-resolution RGB gain map
-                command = string.format('"%s" "%s" "%s" -q %.2f -d 10', pluginPath, pathOrMessage, destFolder, imageQuality/100)
+            local pluginPath = LrPathUtils.child(_PLUGIN.path, "toGainMapHDR")
+            local destFolder = LrPathUtils.parent(heicPath)
+            -- ISO 21496-1 adaptive gain map (default path), 10-bit Main 10 base, full-resolution RGB gain map
+            local command = string.format('"%s" "%s" "%s" -q %.2f -d 10', pluginPath, pathOrMessage, destFolder, imageQuality/100)
 
-            elseif conversionTool == 'sips' then
-                command = string.format('sips -s format heic -s formatOptions %s -o "%s" "%s"', imageQuality, heicPath, pathOrMessage)
-            end
-
-            -- Display the command in debug dialog
-            -- LrDialogs.message("Command to execute", command)
-            
             local result, output = LrTasks.execute(command, {captureStdout = true})
             if result ~= 0 then
                 LrDialogs.showError("Failed to convert to HEIC. Error: " .. (output or "Unknown error"))
