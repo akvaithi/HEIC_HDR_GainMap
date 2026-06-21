@@ -91,6 +91,8 @@ exportServiceProvider.sectionsForTopOfDialog = function(viewFactory, propertyTab
                 f:checkbox {
                     title = "Add exported HEIC to album",
                     value = LrView.bind 'addToPhotos',
+                    tooltip = "After a successful import, the HEIC copy in the export folder "
+                        .. "is deleted (it now lives in Photos). If the import fails, the file is kept.",
                 },
                 f:edit_field {
                     value = LrView.bind 'photosAlbum',
@@ -218,8 +220,17 @@ exportServiceProvider.processRenderedPhotos = function(functionContext, exportCo
                 "Couldn't add photos to the Photos album",
                 "The HEIC files were exported successfully, but importing them into Photos failed.\n\n" ..
                 "Make sure Lightroom is allowed to control Photos in System Settings \226\134\146 Privacy & Security \226\134\146 Automation.\n\n" ..
+                "The exported files were kept in the export folder.\n\n" ..
                 "Details: " .. (output or "unknown error"),
                 "warning")
+        else
+            -- Import succeeded: Photos has copied the files into its library, so remove
+            -- the copies left in the export folder.
+            for _, p in ipairs(photosImportList) do
+                if LrFileUtils.exists(p) then
+                    LrFileUtils.delete(p)
+                end
+            end
         end
     end
 

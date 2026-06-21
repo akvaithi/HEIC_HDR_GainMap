@@ -88,6 +88,8 @@ warns if any forced setting doesn't take.
 - **Apple Photos** — tick *Add exported HEIC to album* and name an album to import each result
   straight into Photos (the album is created if missing). macOS asks for permission to control
   Photos the first time; allow it under **System Settings ▸ Privacy & Security ▸ Automation**.
+  After a successful import the HEIC copy left in the export folder is deleted (it now lives in
+  Photos); if the import fails, the file is kept.
 
 ### Output format
 
