@@ -10,7 +10,7 @@ local LrProgressScope = import 'LrProgressScope'
 local exportServiceProvider = {}
 
 exportServiceProvider.exportPresetFields = {
-    { key = 'imageQuality', default = 70 },
+    { key = 'imageQuality', default = 85 }, -- 85 is the HDR sweet spot; HEVC artifacts show in highlights below this
     { key = 'conversionTool', default = 'toGainMapHDR' }, -- Added conversion tool option
 }
 
@@ -71,8 +71,39 @@ exportServiceProvider.processRenderedPhotos = function(functionContext, exportCo
         functionContext = functionContext
     })
 
-    local imageQuality = exportContext.propertyTable.imageQuality or 70
+    local imageQuality = exportContext.propertyTable.imageQuality or 85
     local conversionTool = exportContext.propertyTable.conversionTool or 'toGainMapHDR'
+
+    -- Quality guard: the gain-map engine can only preserve the HDR headroom and gamut
+    -- that Lightroom hands it. An 8-bit or non-TIFF intermediary produces a hollow
+    -- 10-bit HEIC, so warn (once) if the export isn't 16-bit TIFF with HDR enabled.
+    if conversionTool == 'toGainMapHDR' then
+        local settings = exportContext.propertyTable
+        local fmt = settings.LR_format
+        local bitDepth = tonumber(settings.LR_export_bitDepth) or 8
+        local hdrOn = settings.LR_export_useHDR
+        local issues = {}
+        if fmt ~= 'TIFF' then
+            table.insert(issues, "- Format is '" .. tostring(fmt) .. "'; use TIFF (it is the HDR intermediary).")
+        end
+        if bitDepth < 16 then
+            table.insert(issues, "- Bit Depth is " .. bitDepth .. "-bit; use 16-bit so the 10-bit HEIC has real precision.")
+        end
+        if hdrOn == false then
+            table.insert(issues, "- HDR Output is off; enable it (and disable 'Maximum Compatibility').")
+        end
+        if #issues > 0 then
+            local choice = LrDialogs.confirm(
+                "Export settings may limit HDR quality",
+                "For best 10-bit ISO 21496-1 HDR results:\n\n" .. table.concat(issues, "\n") ..
+                "\n\nExport wide-gamut (Display P3 or Rec. 2020) for the richest highlights.",
+                "Continue anyway", "Cancel")
+            if choice == 'cancel' then
+                progressScope:done()
+                return
+            end
+        end
+    end
 
     for i, rendition in exportSession:renditions() do
         progressScope:setPortionComplete(i-1, nPhotos)
