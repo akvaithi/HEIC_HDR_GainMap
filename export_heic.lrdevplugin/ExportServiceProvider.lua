@@ -42,25 +42,28 @@ exportServiceProvider.sectionsForTopOfDialog = function(viewFactory, propertyTab
         propertyTable.imageQuality = math.floor(propertyTable.imageQuality + 0.5)
     end)
 
-    -- Visually lock the HDR-critical File Settings so the dialog reflects (and snaps back
-    -- to) what the pipeline needs. Color Space (gamut) is intentionally NOT locked, so it
-    -- stays user-selectable. This mirrors the forcing done in updateExportSettings.
-    local function lockSetting(key, value)
-        if propertyTable[key] ~= value then propertyTable[key] = value end
-        propertyTable:addObserver(key, function()
-            if propertyTable[key] ~= value then propertyTable[key] = value end
-        end)
-    end
-    lockSetting('LR_format', 'TIFF')
-    lockSetting('LR_export_bitDepth', 16)
-    lockSetting('LR_export_useHDR', true)
-    lockSetting('LR_export_maximizeCompatibility', false)
-    lockSetting('LR_maximumCompatibility', false)
-    lockSetting('LR_tiff_compressionMethod', 'compressionMethod_None')
+    -- Note: the HDR-critical File Settings (TIFF, 16-bit, HDR Output on, Maximize
+    -- Compatibility off) are forced at export time in updateExportSettings. Lightroom
+    -- does not let a plugin redraw its built-in File Settings widgets, so the panel may
+    -- still *look* unset even though the export uses the forced values. The reminder
+    -- text below explains this; Color Space (gamut) remains user-selectable.
 
     return {
         {
             title = "HEIC Export Options",
+            f:row {
+                f:static_text {
+                    title = "This plugin auto-applies the HDR intermediary on export:\n"
+                        .. "    \226\128\162 Format: TIFF      \226\128\162 Bit Depth: 16-bit\n"
+                        .. "    \226\128\162 HDR Output: ON   \226\128\162 Maximize Compatibility: OFF\n"
+                        .. "The File Settings panel above may still look unset \226\128\148 that's a\n"
+                        .. "Lightroom display quirk; the export uses the values above.\n"
+                        .. "Just choose your Color Space / gamut (P3 HDR or Rec. 2020 HDR).",
+                    height_in_lines = 6,
+                    fill_horizontal = 1,
+                },
+            },
+            f:separator { fill_horizontal = 1 },
             f:row {
                 f:static_text {
                     title = "Image Quality:",
