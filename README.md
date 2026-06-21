@@ -31,9 +31,11 @@ snapshot from **September 2025**; this repository updates that engine to
 - the subsampled (`-H`) ISO gain map channel-metadata fix;
 - minimum macOS bumped in line with upstream.
 
-The plugin only ever invokes the engine as `toGainMapHDR <src> <dst> -q <quality> -g`
-(Apple gain map), and both flags are unchanged across the engine update, so the export
-workflow is unaffected.
+The plugin invokes the engine as `toGainMapHDR <src> <dst> -q <quality> -d 10`, which
+produces a **10-bit (HEVC Main 10) base image** with a full-resolution **ISO 21496-1
+adaptive gain map** (`urn:iso:std:iso-ts:21496:-1:gainmap`) — the modern standard used by
+Apple's native pipeline since iOS 18 / macOS Sequoia. Earlier builds used `-g` (Apple's
+proprietary `MakerApple` gain map, 8-bit); see the project history for that change.
 
 ---
 

@@ -85,7 +85,8 @@ exportServiceProvider.processRenderedPhotos = function(functionContext, exportCo
             if conversionTool == 'toGainMapHDR' then
                 local pluginPath = LrPathUtils.child(_PLUGIN.path, "toGainMapHDR")
                 local destFolder = LrPathUtils.parent(heicPath)
-                command = string.format('"%s" "%s" "%s" -q %.2f -g', pluginPath, pathOrMessage, destFolder, imageQuality/100)
+                -- ISO 21496-1 adaptive gain map (default path), 10-bit Main 10 base, full-resolution RGB gain map
+                command = string.format('"%s" "%s" "%s" -q %.2f -d 10', pluginPath, pathOrMessage, destFolder, imageQuality/100)
 
             elseif conversionTool == 'sips' then
                 command = string.format('sips -s format heic -s formatOptions %s -o "%s" "%s"', imageQuality, heicPath, pathOrMessage)
