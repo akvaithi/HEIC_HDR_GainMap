@@ -42,6 +42,22 @@ exportServiceProvider.sectionsForTopOfDialog = function(viewFactory, propertyTab
         propertyTable.imageQuality = math.floor(propertyTable.imageQuality + 0.5)
     end)
 
+    -- Visually lock the HDR-critical File Settings so the dialog reflects (and snaps back
+    -- to) what the pipeline needs. Color Space (gamut) is intentionally NOT locked, so it
+    -- stays user-selectable. This mirrors the forcing done in updateExportSettings.
+    local function lockSetting(key, value)
+        if propertyTable[key] ~= value then propertyTable[key] = value end
+        propertyTable:addObserver(key, function()
+            if propertyTable[key] ~= value then propertyTable[key] = value end
+        end)
+    end
+    lockSetting('LR_format', 'TIFF')
+    lockSetting('LR_export_bitDepth', 16)
+    lockSetting('LR_export_useHDR', true)
+    lockSetting('LR_export_maximizeCompatibility', false)
+    lockSetting('LR_maximumCompatibility', false)
+    lockSetting('LR_tiff_compressionMethod', 'compressionMethod_None')
+
     return {
         {
             title = "HEIC Export Options",
